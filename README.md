@@ -38,7 +38,7 @@ curl "https://api.genelpara.com/json/?list=doviz&sembol=USD,EUR"
 ## 📂 Klasör Yapısı
 
 ```
-genelpara-api-examples/
+genelpara-api/
 ├── php/
 │   ├── basic-example.php        # Basit kullanım
 │   ├── multi-category.php       # Çoklu kategori
@@ -207,8 +207,8 @@ Terminal'den hızlı fiyat kontrolü.
 
 ```bash
 # Repository'yi klonlayın
-git clone https://github.com/berkocan/genelpara-api-examples.git
-cd genelpara-api-examples
+git clone https://github.com/berkocan/genelpara-api.git
+cd genelpara-api
 
 # PHP örneği çalıştır
 php php/basic-example.php
@@ -255,7 +255,7 @@ Bu proje [MIT lisansı](LICENSE) altında lisanslanmıştır.
 ## 💬 Destek
 
 - **API Dokümantasyonu:** [api.genelpara.com](https://api.genelpara.com)
-- **GitHub Issues:** [Yeni issue aç](https://github.com/berkocan/genelpara-api-examples/issues)
+- **GitHub Issues:** [Yeni issue aç](https://github.com/berkocan/genelpara-api/issues)
 
 ## 🙏 Teşekkürler
 
