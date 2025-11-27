@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Döviz Kurları - GenelPara API</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        select, button {
+            padding: 12px 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: #1e40af; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .rates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .rate-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            border-left: 5px solid #2563eb;
+        }
+        .rate-card:hover { transform: translateY(-5px); }
+        .rate-card.up { border-left-color: #10b981; }
+        .rate-card.down { border-left-color: #ef4444; }
+        .symbol {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+        .prices {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .price-item {
+            flex: 1;
+        }
+        .price-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .price-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+        }
+        .change {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .change.up { background: #d1fae5; color: #065f46; }
+        .change.down { background: #fee2e2; color: #991b1b; }
+        .change.neutral { background: #e2e8f0; color: #475569; }
+        .info-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.5rem;
+            margin: 50px 0;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💱 Canlı Döviz & Kripto Kurları</h1>
+        
+        <div class="controls">
+            <select id="category">
+                <option value="doviz">Döviz</option>
+                <option value="kripto">Kripto</option>
+                <option value="altin">Altın</option>
+                <option value="doviz,kripto">Döviz + Kripto</option>
+            </select>
+            <button onclick="loadRates()" id="refreshBtn">
+                🔄 Yenile
+            </button>
+            <span id="lastUpdate"></span>
+        </div>
+        
+        <div id="content"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://api.genelpara.com/json/';
+        let currentData = null;
+
+        // Sayfa yüklendiğinde veri çek
+        window.addEventListener('DOMContentLoaded', () => {
+            loadRates();
+            // Her 5 dakikada otomatik yenile
+            setInterval(loadRates, 5 * 60 * 1000);
+        });
+
+        async function loadRates() {
+            const content = document.getElementById('content');
+            const btn = document.getElementById('refreshBtn');
+            const category = document.getElementById('category').value;
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Yükleniyor...';
+            
+            content.innerHTML = '<div class="loading">Veriler yükleniyor...</div>';
+            
+            try {
+                const params = new URLSearchParams({
+                    list: category,
+                    sembol: 'all'
+                });
+                
+                const response = await fetch(`${API_URL}?${params}`);
+                
+                if (!response.ok) {
+                    throw new Error('API isteği başarısız');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentData = data;
+                    displayRates(data);
+                    updateLastUpdate();
+                } else {
+                    throw new Error(data.error || 'Bilinmeyen hata');
+                }
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Hata:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Yenile';
+            }
+        }
+
+        function displayRates(data) {
+            const content = document.getElementById('content');
+            
+            let html = '<div class="rates-grid">';
+            
+            Object.entries(data.data).forEach(([symbol, info]) => {
+                const direction = info.yon === 'moneyUp' ? 'up' : 
+                                info.yon === 'moneyDown' ? 'down' : 'neutral';
+                const arrow = direction === 'up' ? '↗' : 
+                            direction === 'down' ? '↘' : '→';
+                
+                html += `
+                    <div class="rate-card ${direction}">
+                        <div class="symbol">${symbol}</div>
+                        <div class="prices">
+                            <div class="price-item">
+                                <div class="price-label">Alış</div>
+                                <div class="price-value">${parseFloat(info.alis).toFixed(4)}</div>
+                            </div>
+                            <div class="price-item">
+                                <div class="price-label">Satış</div>
+                                <div class="price-value">${parseFloat(info.satis).toFixed(4)}</div>
+                            </div>
+                        </div>
+                        <span class="change ${direction}">
+                            ${arrow} ${info.oran} (${info.degisim}%)
+                        </span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            html += `
+                <div class="info-box">
+                    <strong>ℹ️ Rate Limit:</strong> 
+                    ${data.rate_limit.remaining}/${data.rate_limit.limit} istek kaldı
+                    <br>
+                    <small>Sıfırlanma: ${data.rate_limit.reset_at}</small>
+                </div>
+            `;
+            
+            content.innerHTML = html;
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('tr-TR');
+            document.getElementById('lastUpdate').textContent = 
+                `Son güncelleme: ${timeStr}`;
+        }
+    </script>
+</body>
+</html>
